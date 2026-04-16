@@ -39,6 +39,7 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragStart = { totalDrag = 0f },
@@ -59,9 +60,6 @@ fun HomeScreen(
             }
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Remove Area (Placeholder for drop logic)
-            RemoveArea()
-
             Box(modifier = Modifier.weight(1f)) {
                 if (viewModel.displayMode == HomeDisplayMode.GRID) {
                     HomeGrid(viewModel)
@@ -72,23 +70,6 @@ fun HomeScreen(
 
             // Dock (Fixed at bottom)
             HomeDock(viewModel)
-        }
-    }
-}
-
-@Composable
-fun RemoveArea() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(60.dp)
-            .background(Color.Red.copy(alpha = 0.1f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Delete, contentDescription = "Remove", tint = Color.Red)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Remove", color = Color.Red)
         }
     }
 }

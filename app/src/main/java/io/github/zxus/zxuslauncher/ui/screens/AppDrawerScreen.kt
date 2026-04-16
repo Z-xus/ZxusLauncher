@@ -88,6 +88,7 @@ fun AppDrawerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(top = 16.dp)
     ) {
         OutlinedTextField(
