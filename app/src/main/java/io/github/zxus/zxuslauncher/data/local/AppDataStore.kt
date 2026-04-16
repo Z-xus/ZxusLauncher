@@ -21,6 +21,7 @@ class AppDataStore(private val context: Context) {
         private val PINNED_APPS_KEY = stringPreferencesKey("pinned_apps")
         private val DOCK_APPS_KEY = stringPreferencesKey("dock_apps")
         private val INITIALIZED_KEY = androidx.datastore.preferences.core.booleanPreferencesKey("initialized")
+        private val AUTO_OPEN_KEYBOARD_KEY = androidx.datastore.preferences.core.booleanPreferencesKey("auto_open_keyboard")
     }
 
     val customNamesFlow: Flow<Map<String, String>> = context.dataStore.data
@@ -66,6 +67,14 @@ class AppDataStore(private val context: Context) {
             preferences[INITIALIZED_KEY] ?: false
         }
 
+    val autoOpenKeyboardFlow: Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { preferences ->
+            preferences[AUTO_OPEN_KEYBOARD_KEY] ?: true
+        }
+
     suspend fun savePinnedApps(packageNames: List<String>) {
         context.dataStore.edit { preferences ->
             preferences[PINNED_APPS_KEY] = packageNames.joinToString(";")
@@ -81,6 +90,12 @@ class AppDataStore(private val context: Context) {
     suspend fun setInitialized(initialized: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[INITIALIZED_KEY] = initialized
+        }
+    }
+
+    suspend fun setAutoOpenKeyboard(autoOpen: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[AUTO_OPEN_KEYBOARD_KEY] = autoOpen
         }
     }
 

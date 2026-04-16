@@ -11,7 +11,6 @@ import io.github.zxus.zxuslauncher.data.model.AppInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -30,6 +29,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val _dockApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val dockApps: StateFlow<List<AppInfo>> = _dockApps
+
+    val autoOpenKeyboard: StateFlow<Boolean> = dataStore.autoOpenKeyboardFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val defaultPinnedPackages = listOf(
         "com.google.android.apps.photos",
@@ -125,6 +127,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val newList = _dockApps.value.filter { it.packageName != app.packageName }
             _dockApps.value = newList
             dataStore.saveDockApps(newList.map { it.packageName })
+        }
+    }
+
+    fun setAutoOpenKeyboard(autoOpen: Boolean) {
+        viewModelScope.launch {
+            dataStore.setAutoOpenKeyboard(autoOpen)
         }
     }
 }

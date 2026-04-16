@@ -13,12 +13,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,20 +35,37 @@ import io.github.zxus.zxuslauncher.ui.viewmodel.LauncherViewModel
 
 @Composable
 fun AppDrawerScreen(
+    isVisible: Boolean,
     viewModel: AppDrawerViewModel = viewModel(),
     launcherViewModel: LauncherViewModel = viewModel()
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val filteredApps by viewModel.filteredApps.collectAsState()
+    val autoOpenKeyboard by launcherViewModel.autoOpenKeyboard.collectAsState()
     val context = LocalContext.current
     val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
 
     var appToRename by remember { mutableStateOf<AppInfo?>(null) }
     var selectedAppForMenu by remember { mutableStateOf<AppInfo?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    LaunchedEffect(isVisible, autoOpenKeyboard) {
+        if (isVisible && autoOpenKeyboard) {
+            delay(100) // Wait for pager transition to settle
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        } else if (!isVisible) {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            keyboardController?.hide()
+        }
     }
 
     val onSearchAction = {

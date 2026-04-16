@@ -41,7 +41,11 @@ fun LauncherPager(
                 onSwipeDown = { LauncherUtils.expandNotifications(context) },
                 onLongPress = onOpenSettings
             )
-            2 -> AppDrawerScreen()
+            2 -> AppDrawerScreen(
+                isVisible = pagerState.currentPage == 2,
+                viewModel = drawerViewModel,
+                launcherViewModel = viewModel
+            )
         }
     }
 }
