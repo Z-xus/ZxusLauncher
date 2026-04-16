@@ -8,11 +8,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import io.github.zxus.zxuslauncher.ui.viewmodel.LauncherViewModel
 import io.github.zxus.zxuslauncher.utils.LauncherUtils
 import kotlinx.coroutines.launch
 
 @Composable
-fun LauncherPager() {
+fun LauncherPager(viewModel: LauncherViewModel, onOpenSettings: () -> Unit) {
     val pagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -31,8 +32,10 @@ fun LauncherPager() {
         when (page) {
             0 -> RSSFeedScreen()
             1 -> HomeScreen(
+                viewModel = viewModel,
                 onSwipeUp = { LauncherUtils.openWebSearch(context) },
-                onSwipeDown = { LauncherUtils.expandNotifications(context) }
+                onSwipeDown = { LauncherUtils.expandNotifications(context) },
+                onLongPress = onOpenSettings
             )
             2 -> AppDrawerScreen()
         }
