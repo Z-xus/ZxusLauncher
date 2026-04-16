@@ -22,11 +22,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import io.github.zxus.zxuslauncher.ui.components.AppIcon
 import io.github.zxus.zxuslauncher.ui.viewmodel.AppDrawerViewModel
 import io.github.zxus.zxuslauncher.ui.viewmodel.HomeDisplayMode
 import io.github.zxus.zxuslauncher.ui.viewmodel.LauncherViewModel
+import androidx.compose.runtime.remember
 
 @Composable
 fun HomeScreen(
@@ -108,6 +110,14 @@ fun HomeList(viewModel: LauncherViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(pinnedApps) { app ->
+            val appIcon = remember(app.packageName) {
+                try {
+                    context.packageManager.getApplicationIcon(app.packageName)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -121,13 +131,16 @@ fun HomeList(viewModel: LauncherViewModel) {
                         .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    app.icon?.let { drawable ->
-                        Image(
-                            bitmap = drawable.toBitmap().asImageBitmap(),
-                            contentDescription = app.label,
-                            modifier = Modifier.fillMaxSize().padding(4.dp)
-                        )
-                    }
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(appIcon)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = app.label,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(text = app.label, style = MaterialTheme.typography.bodyLarge)

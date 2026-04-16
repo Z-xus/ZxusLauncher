@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.coil.compose)
     implementation("androidx.datastore:datastore-preferences:1.1.2")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

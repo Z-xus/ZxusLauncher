@@ -10,12 +10,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import io.github.zxus.zxuslauncher.data.model.AppInfo
+import androidx.compose.runtime.remember
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -25,6 +27,15 @@ fun AppIcon(
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val appIcon = remember(app.packageName) {
+        try {
+            context.packageManager.getApplicationIcon(app.packageName)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
@@ -40,17 +51,14 @@ fun AppIcon(
                 .padding(4.dp),
             contentAlignment = Alignment.Center
         ) {
-            app.icon?.let { drawable ->
-                Image(
-                    bitmap = drawable.toBitmap().asImageBitmap(),
-                    contentDescription = app.label,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } ?: Surface(
-                modifier = Modifier.fillMaxSize(),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceVariant
-            ) {}
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(appIcon)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = app.label,
+                modifier = Modifier.fillMaxSize()
+            )
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(

@@ -33,17 +33,21 @@ class AppDrawerViewModel(application: Application) : AndroidViewModel(applicatio
         _searchQuery,
         dataStore.customNamesFlow
     ) { apps, query, customNames ->
-        apps.map { app ->
-            val customName = customNames[app.packageName]
-            if (customName != null) {
-                app.copy(label = customName)
-            } else {
-                app
-            }
-        }.filter {
-            it.label.contains(query, ignoreCase = true) ||
-                    it.packageName.contains(query, ignoreCase = true)
-        }.sortedBy { it.label.lowercase() }
+        withContext(Dispatchers.Default) {
+            apps.asSequence()
+                .map { app ->
+                    val customName = customNames[app.packageName]
+                    if (customName != null) {
+                        app.copy(label = customName)
+                    } else {
+                        app
+                    }
+                }.filter {
+                    it.label.contains(query, ignoreCase = true) ||
+                            it.packageName.contains(query, ignoreCase = true)
+                }.sortedBy { it.label.lowercase() }
+                .toList()
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
@@ -64,8 +68,8 @@ class AppDrawerViewModel(application: Application) : AndroidViewModel(applicatio
                     .map { resolveInfo ->
                         AppInfo(
                             packageName = resolveInfo.activityInfo.packageName,
-                            label = resolveInfo.loadLabel(packageManager).toString(),
-                            icon = resolveInfo.loadIcon(packageManager)
+                            componentName = resolveInfo.activityInfo.name,
+                            label = resolveInfo.loadLabel(packageManager).toString()
                         )
                     }
                     .distinctBy { it.packageName }
