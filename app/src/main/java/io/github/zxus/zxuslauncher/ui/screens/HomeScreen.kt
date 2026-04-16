@@ -94,7 +94,8 @@ fun HomeGrid(viewModel: LauncherViewModel) {
                 onClick = { 
                     val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
                     if (intent != null) context.startActivity(intent)
-                }
+                },
+                iconManager = viewModel.iconManager
             )
         }
     }
@@ -109,13 +110,12 @@ fun HomeList(viewModel: LauncherViewModel) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(pinnedApps) { app ->
-            val appIcon = remember(app.packageName) {
-                try {
-                    context.packageManager.getApplicationIcon(app.packageName)
-                } catch (e: Exception) {
-                    null
-                }
+        items(pinnedApps, key = { it.packageName }) { app ->
+            val iconState = viewModel.iconManager.getIconState(app.packageName)
+            val appIcon by iconState.collectAsState()
+
+            LaunchedEffect(app.packageName) {
+                viewModel.iconManager.preloadIcon(app.packageName)
             }
 
             Row(
@@ -131,16 +131,18 @@ fun HomeList(viewModel: LauncherViewModel) {
                         .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(appIcon)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = app.label,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(4.dp)
-                    )
+                    if (appIcon != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(appIcon)
+                                .crossfade(false)
+                                .build(),
+                            contentDescription = app.label,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(text = app.label, style = MaterialTheme.typography.bodyLarge)
@@ -169,7 +171,8 @@ fun HomeDock(viewModel: LauncherViewModel) {
                     onClick = {
                         val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
                         if (intent != null) context.startActivity(intent)
-                    }
+                    },
+                    iconManager = viewModel.iconManager
                 )
             }
         }

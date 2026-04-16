@@ -4,10 +4,12 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.zxus.zxuslauncher.data.local.AppDataStore
 import io.github.zxus.zxuslauncher.data.model.AppInfo
+import io.github.zxus.zxuslauncher.data.repository.IconManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,6 +23,13 @@ class AppDrawerViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val packageManager = application.packageManager
     private val dataStore = AppDataStore(application)
+    val iconManager = IconManager(application)
+
+    private var firstPageCount = 20
+
+    fun setFirstPageCount(count: Int) {
+        firstPageCount = count
+    }
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
@@ -34,21 +43,21 @@ class AppDrawerViewModel(application: Application) : AndroidViewModel(applicatio
         dataStore.customNamesFlow
     ) { apps, query, customNames ->
         withContext(Dispatchers.Default) {
-            apps.asSequence()
-                .map { app ->
-                    val customName = customNames[app.packageName]
-                    if (customName != null) {
-                        app.copy(label = customName)
-                    } else {
-                        app
-                    }
-                }.filter {
-                    it.label.contains(query, ignoreCase = true) ||
+            val filtered = if (query.isEmpty()) {
+                apps
+            } else {
+                apps.filter {
+                    val customName = customNames[it.packageName]
+                    val label = customName ?: it.label
+                    label.contains(query, ignoreCase = true) ||
                             it.packageName.contains(query, ignoreCase = true)
-                }.sortedBy { it.label.lowercase() }
-                .toList()
+                }
+            }
+            filtered.sortedBy { it.label.lowercase() }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val iconCache: StateFlow<Map<String, Drawable>> = iconManager.iconCache
 
     init {
         loadApps()
@@ -73,9 +82,31 @@ class AppDrawerViewModel(application: Application) : AndroidViewModel(applicatio
                         )
                     }
                     .distinctBy { it.packageName }
+                    .sortedBy { it.label.lowercase() }
             }
             _allApps.value = apps
+
+            val allPackages = apps.map { it.packageName }
+            val firstPage = allPackages.take(firstPageCount)
+            val rest = allPackages.drop(firstPageCount)
+
+            iconManager.preloadWithPriority(
+                critical = emptyList(),
+                high = emptyList(),
+                normal = firstPage,
+                low = rest
+            )
         }
+    }
+
+    fun preloadAppDrawerIcons(firstPagePackages: List<String>, allPackages: List<String>) {
+        val rest = allPackages - firstPagePackages.toSet()
+        iconManager.preloadWithPriority(
+            critical = emptyList(),
+            high = emptyList(),
+            normal = firstPagePackages,
+            low = rest
+        )
     }
 
     fun onSearchQueryChanged(query: String) {

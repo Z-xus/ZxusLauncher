@@ -1,6 +1,7 @@
 package io.github.zxus.zxuslauncher.ui.viewmodel
 
 import android.app.Application
+import android.graphics.drawable.Drawable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -8,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.zxus.zxuslauncher.data.local.AppDataStore
 import io.github.zxus.zxuslauncher.data.model.AppInfo
+import io.github.zxus.zxuslauncher.data.repository.IconManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,8 +23,7 @@ enum class HomeDisplayMode {
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStore = AppDataStore(application)
-
-    var displayMode by mutableStateOf(HomeDisplayMode.GRID)
+    val iconManager = IconManager(application)
 
     private val _pinnedApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val pinnedApps: StateFlow<List<AppInfo>> = _pinnedApps
@@ -30,8 +31,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _dockApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val dockApps: StateFlow<List<AppInfo>> = _dockApps
 
+    var displayMode by mutableStateOf(HomeDisplayMode.GRID)
+
     val autoOpenKeyboard: StateFlow<Boolean> = dataStore.autoOpenKeyboardFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val iconCache: StateFlow<Map<String, Drawable>> = iconManager.iconCache
 
     private val defaultPinnedPackages = listOf(
         "com.google.android.apps.photos",
@@ -55,13 +60,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun initAppData(allApps: List<AppInfo>) {
         viewModelScope.launch {
             val isInitialized = dataStore.isInitializedFlow.first()
+            var pinned: List<AppInfo> = emptyList()
+            var docked: List<AppInfo> = emptyList()
+
             if (!isInitialized) {
-                // Get default browser package
                 val browserIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("http://"))
                 val resolveInfo = getApplication<Application>().packageManager.resolveActivity(browserIntent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
                 val defaultBrowserPackage = resolveInfo?.activityInfo?.packageName
 
-                val initialPinned = allApps.filter { it.packageName in defaultPinnedPackages }
+                pinned = allApps.filter { it.packageName in defaultPinnedPackages }
 
                 val dockPriority = mutableListOf<String>()
                 if (defaultBrowserPackage != null) {
@@ -69,24 +76,33 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
                 dockPriority.addAll(defaultDockPackages)
 
-                val initialDock = allApps
+                docked = allApps
                     .filter { it.packageName in dockPriority }
                     .sortedBy { dockPriority.indexOf(it.packageName) }
                     .take(4)
 
-                _pinnedApps.value = initialPinned
-                _dockApps.value = initialDock
-
-                dataStore.savePinnedApps(initialPinned.map { it.packageName })
-                dataStore.saveDockApps(initialDock.map { it.packageName })
+                dataStore.savePinnedApps(pinned.map { it.packageName })
+                dataStore.saveDockApps(docked.map { it.packageName })
                 dataStore.setInitialized(true)
             } else {
                 val pinnedPackageNames = dataStore.pinnedAppsFlow.first()
                 val dockPackageNames = dataStore.dockAppsFlow.first()
 
-                _pinnedApps.value = allApps.filter { it.packageName in pinnedPackageNames }
-                _dockApps.value = allApps.filter { it.packageName in dockPackageNames }
+                pinned = allApps.filter { it.packageName in pinnedPackageNames }
+                docked = allApps.filter { it.packageName in dockPackageNames }
             }
+
+            _pinnedApps.value = pinned
+            _dockApps.value = docked
+
+            val dockPackages = docked.map { it.packageName }
+            val pinnedPackages = pinned.map { it.packageName }
+            iconManager.preloadWithPriority(
+                critical = dockPackages,
+                high = pinnedPackages,
+                normal = emptyList(),
+                low = emptyList()
+            )
         }
     }
 

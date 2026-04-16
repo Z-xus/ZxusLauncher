@@ -124,7 +124,8 @@ fun AppDrawerScreen(
                         onLongClick = {
                             selectedAppForMenu = app
                             menuExpanded = true
-                        }
+                        },
+                        iconManager = viewModel.iconManager
                     )
                 }
             }
