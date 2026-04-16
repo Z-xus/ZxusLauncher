@@ -1,5 +1,6 @@
 package io.github.zxus.zxuslauncher.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -17,11 +18,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import io.github.zxus.zxuslauncher.data.model.AppInfo
+import androidx.core.graphics.drawable.toBitmap
+import io.github.zxus.zxuslauncher.ui.components.AppIcon
+import io.github.zxus.zxuslauncher.ui.viewmodel.AppDrawerViewModel
 import io.github.zxus.zxuslauncher.ui.viewmodel.HomeDisplayMode
 import io.github.zxus.zxuslauncher.ui.viewmodel.LauncherViewModel
 
@@ -68,7 +71,7 @@ fun HomeScreen(
             }
 
             // Dock (Fixed at bottom)
-            HomeDock(viewModel.dockApps)
+            HomeDock(viewModel)
         }
     }
 }
@@ -92,6 +95,8 @@ fun RemoveArea() {
 
 @Composable
 fun HomeGrid(viewModel: LauncherViewModel) {
+    val pinnedApps by viewModel.pinnedApps.collectAsState()
+    val context = LocalContext.current
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),
         modifier = Modifier.fillMaxSize(),
@@ -99,29 +104,50 @@ fun HomeGrid(viewModel: LauncherViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(viewModel.pinnedApps) { app ->
-            AppIconItem(app)
+        items(items = pinnedApps.distinctBy { it.packageName },
+            key = { it.packageName }) { app ->
+            AppIcon(
+                app = app,
+                onClick = { 
+                    val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
+                    if (intent != null) context.startActivity(intent)
+                }
+            )
         }
     }
 }
 
 @Composable
 fun HomeList(viewModel: LauncherViewModel) {
+    val pinnedApps by viewModel.pinnedApps.collectAsState()
+    val context = LocalContext.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(viewModel.pinnedApps) { app ->
+        items(pinnedApps) { app ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium)
+                    .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                )
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    app.icon?.let { drawable ->
+                        Image(
+                            bitmap = drawable.toBitmap().asImageBitmap(),
+                            contentDescription = app.label,
+                            modifier = Modifier.fillMaxSize().padding(4.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(text = app.label, style = MaterialTheme.typography.bodyLarge)
             }
@@ -130,7 +156,9 @@ fun HomeList(viewModel: LauncherViewModel) {
 }
 
 @Composable
-fun HomeDock(dockApps: List<AppInfo>) {
+fun HomeDock(viewModel: LauncherViewModel) {
+    val dockApps by viewModel.dockApps.collectAsState()
+    val context = LocalContext.current
     Surface(
         color = Color.Black.copy(alpha = 0.2f),
         modifier = Modifier.fillMaxWidth()
@@ -142,31 +170,14 @@ fun HomeDock(dockApps: List<AppInfo>) {
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             dockApps.take(4).forEach { app ->
-                AppIconItem(app, size = 50.dp)
+                AppIcon(
+                    app = app,
+                    onClick = {
+                        val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
+                        if (intent != null) context.startActivity(intent)
+                    }
+                )
             }
         }
-    }
-}
-
-@Composable
-fun AppIconItem(app: AppInfo, size: androidx.compose.ui.unit.Dp = 60.dp) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(size)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(size)
-                .aspectRatio(1f)
-                .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = app.label,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center
-        )
     }
 }

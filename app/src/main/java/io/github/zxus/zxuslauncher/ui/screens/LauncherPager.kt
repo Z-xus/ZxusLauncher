@@ -13,7 +13,11 @@ import io.github.zxus.zxuslauncher.utils.LauncherUtils
 import kotlinx.coroutines.launch
 
 @Composable
-fun LauncherPager(viewModel: LauncherViewModel, onOpenSettings: () -> Unit) {
+fun LauncherPager(
+    viewModel: LauncherViewModel,
+    drawerViewModel: io.github.zxus.zxuslauncher.ui.viewmodel.AppDrawerViewModel,
+    onOpenSettings: () -> Unit
+) {
     val pagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
